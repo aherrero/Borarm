@@ -7,6 +7,9 @@ Servo servoShoulder;
 Servo servoElbow;
 Servo servoGripper;
 
+int servoBasePosition = 90;
+int servoShoulderPosition = 25;
+
 int analogPotPin = 0;     // potentiometer wiper (middle terminal) connected to analog pin 3
                        // outside leads to ground and +5V
 
@@ -15,8 +18,8 @@ int analogPotPin = 0;     // potentiometer wiper (middle terminal) connected to 
 #define ZEROY 530
 #define ZEROZ 530
 
-#define ZEROXX 1024/2
-#define ZEROYY 1024/2
+#define ZEROXX 512
+#define ZEROYY 515
 
 // Address I2C Wiichuck
 #define WII_NUNCHUK_I2C_ADDRESS 0x52
@@ -41,10 +44,10 @@ void setup()
     servoGripper.attach(4);
 
     // Servo Init position
-    servoBase.write(0);
-    servoShoulder.write(0);
-    servoElbow.write(0);
-    servoGripper.write(0);
+    servoBase.write(servoBasePosition);
+    servoShoulder.write(servoShoulderPosition);
+    // servoElbow.write(0);
+    // servoGripper.write(0);
 
     // initialisation du nunchuck
     Wire.begin();
@@ -122,32 +125,80 @@ void loop()
       if ((data[6] >> 1) & 1)
           c_button = 0;
 
-      Serial.print(joy_x_axis); Serial.print("|");
-      Serial.print(joy_y_axis); Serial.print("|");
+      // Serial.print(joy_x_axis); Serial.print("|");
+      // Serial.print(joy_y_axis); Serial.print("|");
+      //
+      // Serial.print(accelX); Serial.print("|");
+      // Serial.print(accelY); Serial.print("|");
+      // Serial.print(accelZ); Serial.print("|");
+      //
+      // Serial.print(z_button); Serial.print("|");
+      // Serial.print(c_button); Serial.print("|");
+      //
+      // Serial.println("");
 
-      Serial.print(accelX); Serial.print("|");
-      Serial.print(accelY); Serial.print("|");
-      Serial.print(accelZ); Serial.print("|");
+      // // données d'accélération de l'axe Y
+      // // on limite la valeur entre -180 et 180
+      // int value = constrain(joy_x_axis, -180, 180);
+      // // on mappe cette valeur pour le servomoteur soit entre 0 et 180
+      // value = map(value, -180, 180, 0, 180);
+      // // on écrit sur le servomoteur la valeur
+      // servoElbow.write(180-value);
+      //
+      // // données d'accélération de l'axe X
+      // value = constrain(joy_y_axis, -180, 180);
+      // value = map(value, -180, 180, 0, 180);
+      // servoGripper.write(180-value);
 
-      Serial.print(z_button); Serial.print("|");
-      Serial.print(c_button); Serial.print("|");
+      int value = map(joy_x_axis, -512, 512, -100, 100);
+      //Serial.println(value); //-180
 
-      Serial.println("");
+      if(value > -50 && value < 50)
+      {
+        // Nothing to do
+      }
+      else if(value < 50)
+      {
+        servoBasePosition += 5;
+      }
+      else if(value > 50)
+      {
+        servoBasePosition -= 5;
+      }
 
-      // données d'accélération de l'axe Y
-      // on limite la valeur entre -180 et 180
-      int value = constrain(joy_x_axis, -180, 180);
-      // on mappe cette valeur pour le servomoteur soit entre 0 et 180
-      value = map(value, -180, 180, 0, 180);
-      // on écrit sur le servomoteur la valeur
-      //servoBase.write(180-value);
+      servoBase.write(servoBasePosition);
 
-      // données d'accélération de l'axe X
-      value = constrain(joy_y_axis, -180, 180);
-      value = map(value, -180, 180, 0, 180);
-      //servoShoulder.write(180-value);
+      value = map(joy_y_axis, -512, 512, -100, 100);
+      //Serial.println(servoShoulderPosition); //-180
+
+      if(value > -50 && value < 50)
+      {
+        // Nothing to do
+      }
+      else if(value < 50)
+      {
+        servoShoulderPosition += 5;
+      }
+      else if(value > 50)
+      {
+        servoShoulderPosition -= 5;
+      }
+
+      servoShoulder.write(servoShoulderPosition);
+
+      if(z_button == 1)
+      {
+        int value = servoShoulder.read();
+        Serial.println(value);
+      }
+
+      if(c_button == 1)
+      {
+        int value = servoShoulder.read();
+        Serial.println(value);
+      }
 
       // un petit delai pour pas saturer le servomoteur
-      delay(100);
+      delay(50);
     }
 }
