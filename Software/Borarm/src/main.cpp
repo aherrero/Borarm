@@ -8,14 +8,19 @@ Servo servoElbow;
 Servo servoGripper;
 
 int servoBasePosition = 90;
-int servoShoulderPosition = 25;
+int servoShoulderPosition = 120;
+int servoElbowPosition = 60;
+int servoGipperPosition = 90;
 
 int analogPotPin = 0;     // potentiometer wiper (middle terminal) connected to analog pin 3
                        // outside leads to ground and +5V
 
+int gyroCounter = 0;
+int oldAccelY = 0;
+
 // Wiichuck Calibration
 #define ZEROX 1024/2
-#define ZEROY 530
+#define ZEROY 400
 #define ZEROZ 530
 
 #define ZEROXX 512
@@ -46,7 +51,7 @@ void setup()
     // Servo Init position
     servoBase.write(servoBasePosition);
     servoShoulder.write(servoShoulderPosition);
-    // servoElbow.write(0);
+    servoElbow.write(servoElbowPosition);
     // servoGripper.write(0);
 
     // initialisation du nunchuck
@@ -67,11 +72,12 @@ void loop()
 {
     // put your main code here, to run repeatedly:
 
+    servoBase.write(servoBasePosition);
+
     // potentiometer
     float potValue = analogRead(analogPotPin);
     potValue = map(potValue, 0, 1023, 0, 180);
     //Serial.println(potValue);
-    delay(100);
 
     //
     // for (int pos = 0; pos <= 180; pos++) {
@@ -109,7 +115,7 @@ void loop()
 
     if(counter >= 5)
     {
-      // on extrait les données
+      // Get data
       double joy_x_axis = ((data[0] << 2) + ((data[5] >> 2) & 0x03) - ZEROXX);
       double joy_y_axis = ((data[1] << 2) + ((data[5] >> 2) & 0x03) - ZEROYY);
 
@@ -125,80 +131,90 @@ void loop()
       if ((data[6] >> 1) & 1)
           c_button = 0;
 
-      // Serial.print(joy_x_axis); Serial.print("|");
-      // Serial.print(joy_y_axis); Serial.print("|");
-      //
-      // Serial.print(accelX); Serial.print("|");
-      // Serial.print(accelY); Serial.print("|");
-      // Serial.print(accelZ); Serial.print("|");
-      //
-      // Serial.print(z_button); Serial.print("|");
-      // Serial.print(c_button); Serial.print("|");
-      //
-      // Serial.println("");
+      // Mapping Data
+      int x_value = map(joy_x_axis, -512, 512, -100, 100);
+      int y_value = map(joy_y_axis, -512, 512, -100, 100);
 
-      // // données d'accélération de l'axe Y
-      // // on limite la valeur entre -180 et 180
-      // int value = constrain(joy_x_axis, -180, 180);
-      // // on mappe cette valeur pour le servomoteur soit entre 0 et 180
-      // value = map(value, -180, 180, 0, 180);
-      // // on écrit sur le servomoteur la valeur
-      // servoElbow.write(180-value);
-      //
-      // // données d'accélération de l'axe X
-      // value = constrain(joy_y_axis, -180, 180);
-      // value = map(value, -180, 180, 0, 180);
-      // servoGripper.write(180-value);
+      int accelY_value = map(accelY, -300, 150, 0, 90);
 
-      int value = map(joy_x_axis, -512, 512, -100, 100);
-      //Serial.println(value); //-180
-
-      if(value > -50 && value < 50)
+      if(x_value > -50 && x_value < 50)
       {
         // Nothing to do
       }
-      else if(value < 50)
+      else if(x_value < 50)
       {
-        servoBasePosition += 5;
+        if(servoBasePosition <= 180)
+          servoBasePosition += 1;
       }
-      else if(value > 50)
+      else if(x_value > 50)
       {
-        servoBasePosition -= 5;
+        if(servoBasePosition >= 0)
+          servoBasePosition -= 1;
       }
 
       servoBase.write(servoBasePosition);
 
-      value = map(joy_y_axis, -512, 512, -100, 100);
+
       //Serial.println(servoShoulderPosition); //-180
 
-      if(value > -50 && value < 50)
+      if(y_value > -50 && y_value < 50)
       {
         // Nothing to do
       }
-      else if(value < 50)
+      else if(y_value < 50)
       {
-        servoShoulderPosition += 5;
+        if(servoShoulderPosition <= 180)
+          servoShoulderPosition += 1;
       }
-      else if(value > 50)
+      else if(y_value > 50)
       {
-        servoShoulderPosition -= 5;
+        if(servoShoulderPosition >= 70)
+          servoShoulderPosition -= 1;
       }
 
       servoShoulder.write(servoShoulderPosition);
 
+      //Elbow
+      // if(accelY_value > -50 && accelY_value < 50)
+      // {
+      //   // Nothing to do
+      // }
+      // else if(accelY_value < 30)
+      // {
+      //   if(servoElbowPosition <= 180)
+      //     servoElbowPosition += 1;
+      // }
+      // else if(accelY_value > 30)
+      // {
+      //   if(servoElbowPosition >= 0)
+      //     servoElbowPosition -= 1;
+      // }
+
+      gyroCounter++;
+      if(gyroCounter > 5)
+      {
+        servoElbow.write(accelY_value);
+        gyroCounter = 0;
+      }
+
+
       if(z_button == 1)
       {
-        int value = servoShoulder.read();
-        Serial.println(value);
+        Serial.print("Base: ");
+        Serial.print(servoBase.read());
+        Serial.print(", Shoulder: ");
+        Serial.print(servoShoulder.read());
+        Serial.print(", Elbow: ");
+        Serial.print(servoElbow.read());
+        Serial.print(", Gripper: ");
+        Serial.print(servoGripper.read());
+        Serial.println("-------------------");
+
+        delay(500);
       }
 
-      if(c_button == 1)
-      {
-        int value = servoShoulder.read();
-        Serial.println(value);
-      }
 
       // un petit delai pour pas saturer le servomoteur
-      delay(50);
+      delay(10);
     }
 }
